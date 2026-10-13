@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>service-dashboard</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#d29922;}
+  body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
+  .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:16px;padding:12px 28px;background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+  .topbar h1{font-size:17px;font-weight:700;letter-spacing:2px;color:var(--accent);}
+  .topbar .sub{font-size:12px;color:var(--text-muted);}
+  .topbar .right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .view-tabs{display:flex;align-items:center;gap:0;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
+  .vtab{padding:10px 18px;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap;}
+  .vtab:hover{color:var(--text);background:rgba(255,255,255,.03);}
+  .vtab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .vtab .vcount{font-size:10px;margin-left:5px;padding:1px 6px;border-radius:8px;background:rgba(88,166,255,.15);color:var(--accent);}
+  .controls{display:flex;align-items:center;gap:10px;padding:10px 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .search-box{flex:1;min-width:200px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;}
+  .search-box:focus{border-color:var(--accent);}
+  .search-box::placeholder{color:var(--text-muted);}
+  .fbtn{padding:5px 12px;border-radius:18px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer;transition:.2s;}
+  .fbtn:hover{border-color:var(--accent);color:var(--text);}
+  .fbtn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:600;}
+  .type-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+  .note-count{font-size:12px;color:var(--text-muted);margin-left:auto;}
+  .btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:.15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  .btn-primary:hover{opacity:.85;}
+  .btn-green{background:var(--green);color:#0d1117;border-color:var(--green);}
+  .btn-green:hover{opacity:.85;}
+  .btn-red{background:var(--red);color:#fff;border-color:var(--red);}
+  .btn-red:hover{opacity:.85;}
+  .btn-ghost{background:transparent;color:var(--text-muted);border-color:var(--border);}
+  .btn-ghost:hover{color:var(--text);border-color:var(--text-muted);}
+  .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;padding:18px 28px 50px;}
+  .note-card{position:relative;border-radius:10px;padding:16px;cursor:grab;transition:transform .15s,box-shadow .2s;border-left:4px solid;min-height:110px;display:flex;flex-direction:column;user-select:none;}
+  .note-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .note-card.dragging{opacity:.4;transform:scale(.95);}
+  .note-card.drag-over{outline:2px dashed var(--accent);outline-offset:2px;}
+  .note-card .card-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+  .note-card .theme-badge{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;}
+  .note-card .cat-badge{font-size:9px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3);}
+  .note-card .pin-icon{margin-left:auto;font-size:14px;cursor:pointer;opacity:.5;transition:.2s;}
+  .note-card .pin-icon:hover,.note-card .pin-icon.pinned{opacity:1;}
+  .note-card .note-name{font-size:12px;font-weight:700;margin:-2px 0 8px;letter-spacing:.2px;}
+  .note-card .note-text{font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;flex:1;max-height:180px;overflow:hidden;position:relative;}
+  .note-card .note-text.trunc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:50px;background:linear-gradient(transparent,var(--card-bg));pointer-events:none;}
+  .note-card .card-bottom{margin-top:10px;font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .note-card .card-copy{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:rgba(88,166,255,.12);color:var(--accent);font-size:10px;font-weight:700;cursor:pointer;}
+  .note-card .card-copy:hover{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  .note-card .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;}
+  .note-card .tag{font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3);}
+  .modal-bg{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);justify-content:center;align-items:center;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:92%;max-width:720px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);}
+  .modal-head h2{font-size:15px;color:var(--accent);}
+  .modal-x{background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;}
+  .modal-x:hover{color:var(--text);}
+  .modal-body{padding:20px 22px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;}
+  .modal-body textarea{width:100%;min-height:220px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Segoe UI',sans-serif;font-size:13px;line-height:1.7;padding:14px;resize:vertical;outline:none;}
+  .modal-body textarea:focus{border-color:var(--accent);}
+  .modal-body label{font-size:12px;color:var(--text-muted);font-weight:600;}
+  .modal-body select,.modal-body input.field{width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;}
+  .modal-body select:focus,.modal-body input.field:focus{border-color:var(--accent);}
+  .theme-picker{display:flex;gap:8px;flex-wrap:wrap;}
+  .theme-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.2s;}
+  .theme-dot:hover{transform:scale(1.15);}
+  .theme-dot.sel{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+  .tag-input-row{display:flex;gap:8px;align-items:center;}
+  .tag-input{flex:1;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;}
+  .tag-input:focus{border-color:var(--accent);}
+  .tag-list-edit{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+  .tag-edit{font-size:11px;padding:3px 10px;border-radius:12px;background:rgba(88,166,255,.15);color:var(--accent);cursor:pointer;border:1px solid rgba(88,166,255,.3);}
+  .tag-edit:hover{background:rgba(248,81,73,.2);color:var(--red);border-color:rgba(248,81,73,.4);}
+  .modal-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--border);}
+  .modal-foot .left{display:flex;gap:8px;}
+  .modal-foot .right{display:flex;gap:8px;}
+  .confirm-bg{display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.6);justify-content:center;align-items:center;}
+  .confirm-bg.open{display:flex;}
+  .confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:400px;text-align:center;}
+  .confirm-box h3{margin-bottom:10px;color:var(--red);}
+  .confirm-box p{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+  .confirm-box .btns{display:flex;gap:10px;justify-content:center;}
+  .toast{position:fixed;bottom:28px;right:28px;z-index:1200;padding:10px 22px;border-radius:8px;background:var(--green);color:#0d1117;font-size:12px;font-weight:600;transform:translateY(80px);opacity:0;transition:.3s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.error{background:var(--red);color:#fff;}
+  .loading{display:flex;justify-content:center;align-items:center;height:50vh;color:var(--text-muted);font-size:15px;}
+  ::-webkit-scrollbar{width:7px;height:7px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>TESLA SERVICE TEMPLATES</h1>
+  <span class="sub">service-dashboard</span>
+  <div class="right">
+    <button class="btn btn-green" id="btnNew">+ New Note</button>
+  </div>
+</div>
+<div class="view-tabs" id="viewTabs">
+  <div class="vtab active" data-view="all">All</div>
+  <div class="vtab" data-view="prep">Prep</div>
+  <div class="vtab" data-view="rfps">RFP's</div>
+  <div class="vtab" data-view="loaner-wheel-reunites">Loaner Wheel Reunites</div>
+  <div class="vtab" data-view="comms">Comms</div>
+  <div class="vtab" data-view="mobile-elligible">Mobile Elligible</div>
+  <div class="vtab" data-view="notes">Notes</div>
+  <div class="vtab" data-view="ai">AI</div>
+  <div class="vtab" data-view="pinned">Pinned</div>
+</div>
+<div class="controls">
+  <input class="search-box" type="text" placeholder="Search notes..." id="searchBox">
+  <div class="type-sep"></div>
+  <button class="fbtn active" data-type="all">All Types</button>
+  <button class="fbtn" data-type="Yellow">Yellow</button>
+  <button class="fbtn" data-type="Blue">Blue</button>
+  <button class="fbtn" data-type="Purple">Purple</button>
+  <button class="fbtn" data-type="Green">Green</button>
+  <button class="fbtn" data-type="Pink">Pink</button>
+  <button class="fbtn" data-type="Charcoal">Charcoal</button>
+  <button class="fbtn" data-type="White">White</button>
+  <span class="note-count" id="noteCount"></span>
+</div>
+<div id="container"><div class="loading">Loading notes...</div></div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head"><h2 id="mTitle">View Note</h2><button class="modal-x" id="mClose">&times;</button></div>
+    <div class="modal-body">
+      <div><label>Section</label><select id="mSection"></select></div>
+      <div><label>Theme</label><div class="theme-picker" id="mThemePicker"></div></div>
+      <div><label>Content</label><textarea id="mText"></textarea></div>
+      <div><label>Tags</label><div class="tag-input-row"><input class="tag-input" id="mTagInput" placeholder="Add tag, press Enter"><button class="btn btn-ghost" id="mTagAdd" style="padding:5px 10px;">+</button></div><div class="tag-list-edit" id="mTagList"></div></div>
+    </div>
+    <div class="modal-foot">
+      <div class="left"><button class="btn btn-red" id="mDelete">Delete</button></div>
+      <div class="right"><button class="btn btn-green" id="mCopy">Copy</button><button class="btn btn-primary" id="mSave">Save</button><button class="btn btn-ghost" id="mCancel">Close</button></div>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="newModal">
+  <div class="modal">
+    <div class="modal-head"><h2 style="color:var(--green);">Create New Note</h2><button class="modal-x" id="nmClose">&times;</button></div>
+    <div class="modal-body">
+      <div><label>Name</label><input class="field" id="nmName" placeholder="Short name (optional)"></div>
+      <div><label>Section</label><select id="nmSection"></select></div>
+      <div><label>Theme</label><div class="theme-picker" id="nmThemePicker"></div></div>
+      <div><label>Content</label><textarea id="nmText" placeholder="Type your note here..."></textarea></div>
+      <div><label>Tags</label><div class="tag-input-row"><input class="tag-input" id="nmTagInput" placeholder="Add tag, press Enter"><button class="btn btn-ghost" id="nmTagAdd" style="padding:5px 10px;">+</button></div><div class="tag-list-edit" id="nmTagList"></div></div>
+    </div>
+    <div class="modal-foot">
+      <div class="left"></div>
+      <div class="right"><button class="btn btn-green" id="nmCreate">Create Note</button><button class="btn btn-ghost" id="nmCancel">Cancel</button></div>
+    </div>
+  </div>
+</div>
+<div class="confirm-bg" id="confirmDel"><div class="confirm-box"><h3>Delete Note?</h3><p>This note will be permanently removed.</p><div class="btns"><button class="btn btn-red" id="cdYes">Yes, Delete</button><button class="btn btn-ghost" id="cdNo">Cancel</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// First visit loads SEED_DATA. After that this browser owns the notes.
+const NOTES_KEY = 'service_dashboard_notes_v1';
+const PINS_KEY = 'service_dashboard_pins_v1';
+const TAGS_KEY = 'service_dashboard_tags_v1';
+const SEED_DATA = [{"id":"prep-mobile-offer","name":"mobile-offer","text":"Hello! Your upcoming service can be completed by a Tesla Mobile technician at your address — often faster than a visit to the service center. If you would like Mobile service, please reply with the address where you would like the technician to arrive. I will check our schedule and share the soonest available window. Mobile time slots are limited, so please let us know as soon as you can.","theme":"Yellow","section":"prep","createdAt":1790253346004,"updatedAt":1790253346004},{"id":"prep-rfpu-fees","name":"rfpu-fees","text":"Hello , we are pleased to inform you that your vehicle is ready for pickup. Please arrange to pick up your vehicle by the end of the day tomorrow. Kindly note that if the vehicle remains with us after this time, we will be required to apply daily storage and loaner fees beginning Monday. We appreciate your prompt attention to this matter.","theme":"Yellow","section":"prep","createdAt":1790253346005,"updatedAt":1790253346005},{"id":"prep-wheel-followup","name":"wheel-followup","text":"Hello , we have attempted to reach you regarding the wheel reunite for your vehicle but have been unable to connect. Could you please let us know when you might be available today or tomorrow to have this service completed? Additionally, please be advised that our loaner wheels must be returned within one week. from the moment you signed the loaner wheel agreement. Failure to return the loaner within this timeframe will result in a $1,300 fee, and further service at any Tesla location will be suspended until the balance is settled. We look forward to hearing from you soon.","theme":"Yellow","section":"prep","createdAt":1790253346007,"updatedAt":1790253346007},{"id":"prep-rfpu-collect","name":"rfpu-collect","text":"Good afternoon , this is the Tesla Service team. We are reaching out to inform you that your vehicle has been ready for collection for several days. Please be advised that as your service is complete, we kindly request the return of your loaner vehicle. To avoid the accrual of daily loaner fees of $100 and vehicle storage fees of $35 per day, please arrange to return the loaner and collect your vehicle as soon as possible. We appreciate your prompt attention to this matter.","theme":"Yellow","section":"prep","createdAt":1790253346008,"updatedAt":1790253346008},{"id":"prep-log-pull","name":"log-pull","text":"according to  when pulling logs it is always best to pull a weeks worth for each pull. pull two-3 days before the appointment was created. and then pull again the day of each appointment.","theme":"Yellow","section":"prep","createdAt":1790253346009,"updatedAt":1790253346009},{"id":"prep-tools-brief","name":"tools-brief","text":"I've created multiple tools for both sales and service. After automating most of every aspect of sales I have now transitioned to automating service. Below is a summary of mostly everything I've built using Sidekick as well as other tools and models such as Cursor, Claude, and Open Code.\n\nThis is a briefing for someone who has never seen my machine. The point of everything I've built is the same: Tesla Service and Tesla Sales both drown a single person in repetitive board work, and the customer feels every miss.\n\n**Functional scripts** live in `Downloads\\Automations\\Westchase Automations\\SMP SCA MGMT`. Double-click the bat. First run: log into Tesla in the Chrome window it opens.\n\n**Sales** (`Scripts\\Sales\\`)  \nFirstTouch — texts store-owned leads that already have a test drive.  \nFirstTouchThanks — thank-you once a named advisor owns it.  \nOutreach (`allcadence.bat`) — reconnect if silent 4+ days.  \nFollowUpDue — one follow-up date at today+14.  \nDropdownCompletion — fills all profile fields for each opportunity within SMP. leaves as is if already filled\nFOD — refreshes forecasted order date to today+21.  \nCloseLostUndeliverable — opens SMS, does not send; closes only if the number is dead.  \nOpportunityAnalyzer-Attended — scores cold Greater Houston Virtual leads; changes nothing. You must be logged in.  \nOpportunityExecutor — only after  approves the report; type LIVE.\n\n**Service** (`Scripts\\Service\\`)  \nWaiterSeamless — no done-time + under 3 hours → set ETC and Waiter. Skips diagnostics. `/dry` to preview.  \nLoanerSeamless — longer jobs → ETC +2–3 days, transport None.  \nEstimateSeamless — presses Update on $0/outdated estimates. Does not set ETC.  \nSurveyReminder — survey ask after Delivered. Dry unless you pass `/live`.\n\n---\n\n**21 bots** are not live. They sit in `~\\.cursor\\skills\\`. Run `node scripts\\preview.js`. Output goes to `~\\.agentic-os\\reports\\`.  reads that before anything can click SCA. They draft; they don’t send.\n\nBrain — shared memory so bots don’t disagree.  \nHealth — are the other bots and scripts even on disk.  \nAnalytics — advisor + site KPIs (needs an export).  \nKeyTag — lint key tags so the tag matches the car.  \nPrep — plan for unprepared visits; never flips Prepared.  \nSweep — 24–72h out: parts, estimate, transport — report only.  \nLog — surface pre-visit logs; never Notify MacGyver.  \nQueue — snapshot of Mission Control columns.  \nBacklog — classify no-shows; never cancel the visit.  \nFRT — diagnosis lines at least 1 hour; never writes FRT.  \nPay Type — warranty vs plan vs customer pay; never writes it.  \nAnalyzer — must come in / mobile / collision / remote-ed (not the sales analyzer).  \nDiversion — list visits that could be remote; never divert (phone only).  \nSchedule — draft reminders for Prepared + Unscheduled.  \nEstimate — draft “accept your estimate” for Hold (not EstimateSeamless).  \nRFPU — draft “your car is ready”; skip if already sent.  \nReunite — loaner-wheel return reminders; due day = phone, not text.  \nComms — alert if more than 10 open threads.  \nTemplate — harvest SCA message macros.  \nSurvey — wraps SurveyReminder dry.  \nSeamless — wraps Waiter/Loaner/Estimate `/dry`. Do not replace the existing `waiterseamless` skill.\n\nSmall tools around the job (not Playwright jobs)\nServiceAppNotifDedupe — SCA opens in several Chrome tabs, so every toast appears 3 times. This watcher collapses duplicates in ~2.5 seconds so he still sees the event once. Runs at Windows startup.\nTST Dashboard — local notes/templates board (Prep, RFPs, loaner wheels, collision, estimates). Copy-paste ammo for the floor. Nothing uploaded.\nSA Shift Board / Cadence Console / Prep Gate / Key Tag Builder — local HTML checklists for the day: when to triage, when RFPU becomes a fee, nine gates before flipping Prepared, grammar for key tags.\nCopy SV Link — bookmarklet so a Service Visit pastes into Teams as a titled link, not a raw URL.\nSecondBrain — my wiki of how Westchase actually works. Not a Tesla robot.","theme":"Yellow","section":"prep","createdAt":1790253346010,"updatedAt":1790253346010},{"id":"prep-remote-as-designed","name":"remote-as-designed","text":"Hello , we have completed a remote diagnostic assessment of your vehicle and determined that it is operating as designed. If you are unable to access a charging station with higher power output, we recommend minimizing auxiliary power consumption to assist the vehicle in initiating the charge. You can reduce these loads by avoiding preconditioning and exiting the vehicle to ensure the climate control system powers down.","theme":"Yellow","section":"prep","createdAt":1790253346011,"updatedAt":1790253346011},{"id":"prep-earliest-date","name":"earliest-date","text":"I just checked our schedule, at this time your current appointment is set for the first available date. Please keep your eye on the scheduler in the app, as this will be the fastest way to know if a sooner appointment opens up. Thank you!","theme":"Yellow","section":"prep","createdAt":1790253346012,"updatedAt":1790253346012},{"id":"prep-noise-inspection","name":"noise-inspection","text":"Good morning. We understand your concerns regarding the new noises and the change in your vehicle's suspension performance. You are welcome to visit any Tesla Service Center at your convenience for a brief safety inspection. This will allow our team to assess the vehicle and determine whether this is an urgent safety matter or if it can be safely managed until your scheduled appointment.","theme":"Yellow","section":"prep","createdAt":1790253346013,"updatedAt":1790253346013},{"id":"prep-mobile-greetings","name":"mobile-greetings","text":"Greetings,\nWe are pleased to inform you that your upcoming Tesla service can be conveniently handled by our mobile service team. This means we can send a technician to your home or workplace to perform the necessary repairs, saving you a trip to our service center. There are no additional fees for opting for mobile service.\nTo proceed with scheduling a mobile appointment, kindly provide us with the address where you would like the service to be conducted. Please note that mobile appointments may be scheduled at a different date or time, and we will arrange the earliest available slot for you. Once we receive the address, we will finalize the transfer to mobile service.\nThank you, and we wish you a wonderful day!","theme":"Yellow","section":"prep","createdAt":1790253346014,"updatedAt":1790253346014},{"id":"prep-warranty-review","name":"warranty-review","text":"Hello , our technicians will review and verify the issue during your appointment. Once this assessment is complete, we will adjust the charges to warranty coverage as applicable.","theme":"Yellow","section":"prep","createdAt":1790253346015,"updatedAt":1790253346015},{"id":"prep-loaner-availability","name":"loaner-availability","text":"Thank you for your message. Loaner vehicles are provided based on availability at the time of your check-in, and we will make every effort to accommodate your needs.","theme":"Yellow","section":"prep","createdAt":1790253346016,"updatedAt":1790253346016},{"id":"prep-key-tags","name":"key-tags","text":"Key Tags\n\nPUMON5PM\nPUTUES\nPUWED\n\nLVMNA, RFPU Email/Message Sent","theme":"Yellow","section":"prep","createdAt":1790253346017,"updatedAt":1790253346017},{"id":"prep-survey-ask","name":"survey-ask","text":"Hey there this is  from Tesla. Just wanted to reach out to see if by any chance you we're able to get the survey completed for your recent service visit? If not, could you please get that completed? It takes less than a few minutes and would be extremely beneficial for us to get your feedback on your visit so that we can find out how it went as well as what we could have done better. If you've already done it feel free to ignore this message. You can reach out here anytime if you have any questions or need any assistance. ","theme":"Yellow","section":"prep","createdAt":1790253346018,"updatedAt":1790253346018},{"id":"prep-loaner-reserved","name":"loaner-reserved","text":"Good morning. We are pleased to inform you that a loaner vehicle has been reserved for you. Please note that this reservation is held for two hours, until 11:00 AM. Should you be unable to pick up the vehicle within this timeframe, the reservation will be released, and we kindly ask that you continue to utilize your provided rideshare credits. Upon arrival, please ensure you have a copy of your driver's license and proof of insurance with you. Please let us know if you have any questions.","theme":"Yellow","section":"prep","createdAt":1790253346019,"updatedAt":1790253346019},{"id":"prep-loaner-assigned","name":"loaner-assigned","text":"Good morning! I went ahead and assigned you a loaner vehicle. It’s reserved for you for the next two hours. If you don’t pick it up within those two hours the vehicle will be unassigned and you will have to continue using rideshare credits. Please just make sure to bring in a copy of your drivers license and insurance. Feel free to let me know if you have any questions.","theme":"Yellow","section":"prep","createdAt":1790253346020,"updatedAt":1790253346020},{"id":"prep-waive-in","name":"waive-in","text":"Good morning , since this is a safety related concern we can go ahead and waive you in for immediate service. What time would you be able to come in?","theme":"Yellow","section":"prep","createdAt":1790253346021,"updatedAt":1790253346021},{"id":"prep-rfpu-complete","name":"rfpu-complete","text":"Hi , your vehicle's service is complete! You may review your final invoice and pay for your service via your Tesla Mobile App. Please make sure to pick up your vehicle as soon as possible even if after hours to avoid daily storage fees. Feel free to let me know if you have any questions!","theme":"Yellow","section":"prep","createdAt":1790253346022,"updatedAt":1790253346022},{"id":"prep-rfpu-missed","name":"rfpu-missed","text":"Hi , just wanted to follow up since we missed you this morning. As a reminder your vehicle's service was completed as of Wednesday. You may review your final invoice and pay for your service via your Tesla App and once payment has been made you'll have full access. Please make sure to return the loaner vehicle immediately as it must be returned now that service is completed to avoid daily fees for continued usage.","theme":"Yellow","section":"prep","createdAt":1790253346023,"updatedAt":1790253346023},{"id":"prep-rfpu-parked","name":"rfpu-parked","text":"Hi, your vehicle's service is complete! You may review your final invoice and pay for your service via your Tesla Mobile App. Your vehicle is parked in spot . What time should we anticipate your arrival today? Loaner vehicles must be returned now that service is completed to avoid daily fees. If you elect an afterhours drop off of the loaner vehicle, park in any spot up front and drop the key in the drop box next to the front doors. Feel free to let me know if you have any questions!","theme":"Yellow","section":"prep","createdAt":1790253346024,"updatedAt":1790253346024},{"id":"prep-estimate-camera","name":"estimate-camera","text":"Good afternoon. We have updated your service estimate to include the necessary diagnostic time required for our technicians to thoroughly inspect your vehicle's camera system and identify the cause of the concern. Please let us know if you wish to continue with process.","theme":"Yellow","section":"prep","createdAt":1790253346025,"updatedAt":1790253346025},{"id":"prep-parts-tomorrow","name":"parts-tomorrow","text":"Good morning. We are writing to provide an update on your vehicle. We are currently awaiting the arrival of the replacement camera, which is expected tomorrow. Once the part is received, we will be able to provide you with an accurate estimate for the completion of your service.","theme":"Yellow","section":"prep","createdAt":1790253346026,"updatedAt":1790253346026},{"id":"prep-parts-today","name":"parts-today","text":"Good morning. We are currently awaiting the arrival of the necessary part, which is expected to be delivered today. Once it arrives, we will be able to confirm the updated completion time for your vehicle and will notify you promptly.","theme":"Yellow","section":"prep","createdAt":1790253346027,"updatedAt":1790253346027},{"id":"prep-alignment-only","name":"alignment-only","text":"Good afternoon  just wanted to follow up on our previous conversation. After looking into your repairs further and speaking with the technician who worked on your vehicle we were able to confirm that just the wheel alignment and wheel alignment alone was performed. You were only charged for this activity and nothing more. The balance terminology you saw in app is a symptom label that the app automatically assigns based on the type of category the service you are requesting falls under.","theme":"Yellow","section":"prep","createdAt":1790253346028,"updatedAt":1790253346028},{"id":"prep-inventory-note","name":"inventory-note","text":"all in ones, and monitors. autonomy league jacket","theme":"Yellow","section":"prep","createdAt":1790253346032,"updatedAt":1790253346032},{"id":"rfps-rfpu-dropbox","name":"rfpu-dropbox","text":"Hey , this is  from Tesla. Just wanted to let you know your car is ready to be picked up. We're technically closed now so whenever you drop off the loaner please drop the key inside the dropbox right outside. Once done you'll be good to go, just make payment in the app and you'll have full access.","theme":"Green","section":"rfps","createdAt":1790253346038,"updatedAt":1790253346038},{"id":"loaner-wheel-reunites-wheel-ready","name":"wheel-ready","text":"Hello there, we are pleased to inform you that your wheel reunite is ready. Please feel free to visit us tomorrow or Saturday before 5 pm. Please note there is a $121 cancellation fee if you are picking up your wheel, as well as a $1,300 charge if the loaner wheel is not returned to our service center by Saturday at 5pm.","theme":"Blue","section":"loaner-wheel-reunites","createdAt":1790253346006,"updatedAt":1790253346006},{"id":"comms-diag-fee","name":"diag-fee","text":"Good morning. We would like to clarify that we must first perform a physical inspection of your vehicle to determine the root cause of the concern. While we do not charge for repairs covered by the vehicle's warranty, a diagnostic fee is necessary if the issue is found to be caused by external factors not covered under warranty. We will always consult with you regarding any potential charges before proceeding with repairs.","theme":"Purple","section":"comms","createdAt":1790253346029,"updatedAt":1790253346029},{"id":"comms-earlier-appt","name":"earlier-appt","text":"Good morning. Regarding your request for an earlier appointment, please be advised that your current booking reflects our earliest available time. We will continue to monitor our schedule and will notify you immediately should an earlier slot become available.","theme":"Purple","section":"comms","createdAt":1790253346030,"updatedAt":1790253346030},{"id":"comms-extra-issue","name":"extra-issue","text":"Good morning. After reviewing your vehicle, we noticed an issue that was not included on your original service ticket. Could you please confirm if this condition was present prior to your arrival today?","theme":"Purple","section":"comms","createdAt":1790253346031,"updatedAt":1790253346031},{"id":"mobile-elligible-mobile-vm","name":"mobile-vm","text":"Hey  , this is  from Tesla. I tried calling earlier, but it went straight to voicemail. Just wanted to reach out and let you know that your upcoming service appointment qualifies as mobile eligible! That way you can get your work done from the comfort of your own home! Let me know if this is something you would prefer. I can make the switch no problem. Feel free to let me know if you have any questions or need any assistance along the way. Have a great rest of your day!","theme":"Pink","section":"mobile-elligible","createdAt":1790253346036,"updatedAt":1790253346036},{"id":"mobile-elligible-mobile-disconnected","name":"mobile-disconnected","text":"Hey  , this is  from Tesla. I tried calling earlier, but it seems we may have gotten disconnected. Just wanted to reach out and let you know that your upcoming service appointment qualifies as mobile eligible! That way you can get your work done from the comfort of your own home! Let me know if this is something you would prefer. I can make the switch no problem. Feel free to let me know if you have any questions or need any assistance along the way. Have a great rest of your day!","theme":"Pink","section":"mobile-elligible","createdAt":1790253346037,"updatedAt":1790253346037},{"id":"notes-rfpu-short","name":"rfpu-short","text":"Hey , this is  from Tesla. Just wanted to let you know your car is ready to be picked up! Just make payment in the app and you'll have full access. Feel free to let me know if you have any questions.","theme":"Charcoal","section":"notes","createdAt":1790253346034,"updatedAt":1790253346034},{"id":"notes-rfpu-call","name":"rfpu-call","text":"Good morning  , I tried giving you a call. We are pleased to inform you that your vehicle is ready for pick up. To avoid any additional fees, we kindly request that you return the loaner vehicle today. Please return the key cards to our team, or alternatively, leave them in the center console and lock the vehicle using the Tesla app. You may also utilize our secure drop box for key return. Please let us know what time you will be picking up your vehicle today. Your vehicle is parked in spot #30 for your convenience. We look forward to seeing you soon","theme":"Charcoal","section":"notes","createdAt":1790253346035,"updatedAt":1790253346035},{"id":"ai-scripts-share","name":"scripts-share","text":"Hey \n\nEveryone\n\n just thought I would share this since I am no longer in sales and want the best for this company and all of it's employees! Feel free to send this to whoever as this folder is publicly available to any Tesla employee. I recommend using these as templates and then catering them to your own applications.\n\n\n\nAttached are all of my scripts that I built alongside the files that pertain to them. Feel free to tweak and download anything and let me know if you have any questions or run into issues when trying to install or run any of them. Most of them work, but if not just ask Sidekick inside Nova to review the corresponding attached .md files and to make them fully operational. Just extract and build on top of the ones that you want. It's running on Grok 4.5 so it should be able to get it done without a problem. With that said, I managed to automate most of every aspect of the sales pipeline aside from tasks such as PDC's, TDFU's, TIFU's and Actionable Comms/Ops since they require actual human interaction such as a phone call.\n\n\n\nI also included a readme.md file so that you can implement parallel runs as well. I've built all of these using a combination of different tools/models so if you run into any issues just reach out to me directly and I'll be sure to help you out. For memory/ram purposes I recommend packaging them up into skills and plugging them into Digital Optimus. You can technically also run it locally on your device just by double clicking on the batch file, so if you want to be able to have Digital Optimus run other tasks then I would definitely recommend it. Alongside the folder I'll include a few videos of multiple different scripts running in parallel for reference. \n\n\n\nFeel free to let me know if you have any questions or need any assistance.\n\n\n\nExcited to see what you guys build with this! \n\n\n\nSMP Management","theme":"White","section":"ai","createdAt":1790253346033,"updatedAt":1790253346033},{"id":"ai-automation-goal","name":"automation-goal","text":"my goal is to automate repetitive tasks that do not require human interaction","theme":"White","section":"ai","createdAt":1790253346039,"updatedAt":1790253346039}];
+const SECTIONS = [
+  {id:'prep', name:'Prep'},
+  {id:'rfps', name:"RFP's"},
+  {id:'loaner-wheel-reunites', name:'Loaner Wheel Reunites'},
+  {id:'comms', name:'Comms'},
+  {id:'mobile-elligible', name:'Mobile Elligible'},
+  {id:'notes', name:'Notes'},
+  {id:'ai', name:'AI'}
+];
+
+function loadNotes() {
+  const raw = localStorage.getItem(NOTES_KEY);
+  if (raw) return JSON.parse(raw);
+  saveNotes(SEED_DATA);
+  const tags = {};
+  SEED_DATA.forEach(function(n){ if (n.name) tags[n.id] = [n.name]; });
+  localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+  return SEED_DATA.slice();
+}
+function saveNotes(notes) { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
+function uid() { return crypto.randomUUID ? crypto.randomUUID() : 'xxxx-xxxx-xxxx'.replace(/x/g, function(){ return Math.floor(Math.random()*16).toString(16); }); }
+function now() { return Date.now(); }
+function sectionName(id){ const t = SECTIONS.find(function(x){ return x.id === id; }); return t ? t.name : (id || 'Unfiled'); }
+
+const TC = {
+  Yellow:{bg:'#2a2517',border:'#f1c40f',badge:'#f1c40f',bbg:'#3d3210',text:'#fde68a',dot:'#f1c40f'},
+  Blue:{bg:'#131d2e',border:'#3498db',badge:'#3498db',bbg:'#112240',text:'#93c5fd',dot:'#3498db'},
+  Green:{bg:'#132218',border:'#2ecc71',badge:'#2ecc71',bbg:'#0d3320',text:'#86efac',dot:'#2ecc71'},
+  Pink:{bg:'#2a1318',border:'#e74c3c',badge:'#e74c3c',bbg:'#3b1520',text:'#fca5a5',dot:'#e74c3c'},
+  Purple:{bg:'#1f1529',border:'#9b59b6',badge:'#9b59b6',bbg:'#2d1b40',text:'#d8b4fe',dot:'#9b59b6'},
+  Charcoal:{bg:'#1a1e24',border:'#5d6d7e',badge:'#5d6d7e',bbg:'#2c333d',text:'#d1d5db',dot:'#5d6d7e'},
+  White:{bg:'#1c1f24',border:'#9ca3af',badge:'#9ca3af',bbg:'#2a2e35',text:'#e5e7eb',dot:'#9ca3af'}
+};
+
+let ALL = [];
+let activeView = 'all';
+let activeType = 'all';
+let currentNote = null;
+let newNoteTags = [];
+let dragSrcId = null;
+
+function getPins(){ return JSON.parse(localStorage.getItem(PINS_KEY) || '[]'); }
+function setPins(a){ localStorage.setItem(PINS_KEY, JSON.stringify(a)); }
+function togglePin(id){ const p = getPins(); const i = p.indexOf(id); if (i >= 0) p.splice(i, 1); else p.push(id); setPins(p); }
+function isPinned(id){ return getPins().indexOf(id) >= 0; }
+function getTags(id){ return JSON.parse(localStorage.getItem(TAGS_KEY) || '{}')[id] || []; }
+function setTags(id, arr){ const t = JSON.parse(localStorage.getItem(TAGS_KEY) || '{}'); t[id] = arr; localStorage.setItem(TAGS_KEY, JSON.stringify(t)); }
+
+function load(){ ALL = loadNotes(); updateViewCounts(); render(); }
+
+function updateViewCounts(){
+  const c = {all: ALL.length, pinned: getPins().filter(function(id){ return ALL.some(function(n){ return n.id === id; }); }).length};
+  SECTIONS.forEach(function(s){ c[s.id] = 0; });
+  ALL.forEach(function(n){ if (c[n.section] !== undefined) c[n.section]++; });
+  document.querySelectorAll('.vtab').forEach(function(tab){
+    const v = tab.dataset.view;
+    const cnt = c[v] || 0;
+    const ex = tab.querySelector('.vcount');
+    if (ex) ex.textContent = cnt;
+    else { const s = document.createElement('span'); s.className = 'vcount'; s.textContent = cnt; tab.appendChild(s); }
+  });
+}
+
+function sorted(notes){
+  const pins = getPins();
+  const p = [];
+  const r = [];
+  notes.forEach(function(n){ if (pins.indexOf(n.id) >= 0) p.push(n); else r.push(n); });
+  return p.concat(r);
+}
+
+function render(){
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  let list = ALL.filter(function(n){
+    if (activeView === 'pinned') return isPinned(n.id);
+    if (activeView !== 'all' && n.section !== activeView) return false;
+    return true;
+  });
+  if (activeType !== 'all') list = list.filter(function(n){ return n.theme === activeType; });
+  if (q) list = list.filter(function(n){
+    return (n.text || '').toLowerCase().indexOf(q) >= 0
+      || (n.name || '').toLowerCase().indexOf(q) >= 0
+      || sectionName(n.section).toLowerCase().indexOf(q) >= 0
+      || getTags(n.id).some(function(t){ return t.toLowerCase().indexOf(q) >= 0; });
+  });
+  list = sorted(list);
+  document.getElementById('noteCount').textContent = list.length + ' / ' + ALL.length + ' notes';
+  updateViewCounts();
+  if (!list.length){ document.getElementById('container').innerHTML = '<div class="loading">No notes found.</div>'; return; }
+  const grid = document.createElement('div');
+  grid.className = 'notes-grid';
+  list.forEach(function(note){
+    const c = TC[note.theme] || TC.Yellow;
+    const tags = getTags(note.id);
+    const pinned = isPinned(note.id);
+    const dText = note.text || '';
+    const isLong = dText.length > 350;
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.draggable = true;
+    card.dataset.id = note.id;
+    card.style.background = c.bg;
+    card.style.borderLeftColor = c.border;
+    card.style.setProperty('--card-bg', c.bg);
+    card.innerHTML = '<div class="card-top"><span class="theme-badge" style="background:' + c.bbg + ';color:' + c.badge + ';">' + esc(note.theme) + '</span><span class="cat-badge">' + esc(sectionName(note.section)) + '</span><span class="pin-icon' + (pinned ? ' pinned' : '') + '" title="' + (pinned ? 'Unpin' : 'Pin') + '">' + (pinned ? '\u{1F4CC}' : '\u{1F4CD}') + '</span></div>'
+      + (note.name ? '<div class="note-name" style="color:' + c.text + '">' + esc(note.name) + '</div>' : '')
+      + '<div class="note-text' + (isLong ? ' trunc' : '') + '" style="color:' + c.text + '">' + esc(isLong ? dText.slice(0, 350) : dText) + '</div>'
+      + (tags.length ? '<div class="tags">' + tags.map(function(t){ return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>' : '')
+      + '<div class="card-bottom"><span>' + dText.length + ' chars</span><button type="button" class="card-copy" title="Copy note">Copy</button></div>';
+    card.addEventListener('click', function(e){ if (e.target.closest('.pin-icon,.card-copy')) return; openEdit(note); });
+    card.querySelector('.pin-icon').addEventListener('click', function(e){ e.stopPropagation(); togglePin(note.id); render(); toast(isPinned(note.id) ? 'Pinned!' : 'Unpinned'); });
+    card.querySelector('.card-copy').addEventListener('click', function(e){ e.stopPropagation(); navigator.clipboard.writeText(note.text || ''); toast('Copied!'); });
+    card.addEventListener('dragstart', function(e){ dragSrcId = note.id; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    card.addEventListener('dragend', function(){ card.classList.remove('dragging'); dragSrcId = null; });
+    card.addEventListener('dragover', function(e){ e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', function(){ card.classList.remove('drag-over'); });
+    card.addEventListener('drop', function(e){ e.preventDefault(); card.classList.remove('drag-over'); if (dragSrcId && dragSrcId !== note.id) reorderNotes(dragSrcId, note.id); });
+    grid.appendChild(card);
+  });
+  const ct = document.getElementById('container');
+  ct.innerHTML = '';
+  ct.appendChild(grid);
+}
+
+function reorderNotes(fid, tid){
+  const fi = ALL.findIndex(function(n){ return n.id === fid; });
+  if (fi < 0) return;
+  const note = ALL.splice(fi, 1)[0];
+  const ti = ALL.findIndex(function(n){ return n.id === tid; });
+  if (ti < 0) return;
+  ALL.splice(ti, 0, note);
+  saveNotes(ALL);
+  render();
+  toast('Reordered!');
+}
+function esc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function fillSectionSelect(selId, selected){
+  const el = document.getElementById(selId);
+  const prefer = selected || (activeView !== 'all' && activeView !== 'pinned' ? activeView : SECTIONS[0].id);
+  el.innerHTML = SECTIONS.map(function(t){
+    return '<option value="' + esc(t.id) + '"' + (t.id === prefer ? ' selected' : '') + '>' + esc(t.name) + '</option>';
+  }).join('');
+}
+function buildThemePicker(cid, sel){
+  const el = document.getElementById(cid);
+  el.innerHTML = Object.keys(TC).map(function(n){
+    const c = TC[n];
+    return '<div class="theme-dot' + (n === sel ? ' sel' : '') + '" data-theme="' + n + '" style="background:' + c.dot + ';" title="' + n + '"></div>';
+  }).join('');
+  el.querySelectorAll('.theme-dot').forEach(function(d){
+    d.addEventListener('click', function(){ el.querySelectorAll('.theme-dot').forEach(function(x){ x.classList.remove('sel'); }); d.classList.add('sel'); });
+  });
+}
+function getSelectedTheme(cid){ const s = document.querySelector('#' + cid + ' .theme-dot.sel'); return s ? s.dataset.theme : 'Yellow'; }
+
+function openEdit(note){
+  currentNote = note;
+  document.getElementById('mTitle').textContent = note.name || (note.theme + ' Note');
+  document.getElementById('mText').value = note.text || '';
+  fillSectionSelect('mSection', note.section);
+  buildThemePicker('mThemePicker', note.theme || 'Yellow');
+  renderEditTags();
+  document.getElementById('modal').classList.add('open');
+}
+function renderEditTags(){
+  const tags = getTags(currentNote.id);
+  const list = document.getElementById('mTagList');
+  list.innerHTML = tags.map(function(t){ return '<span class="tag-edit" data-t="' + esc(t) + '">' + esc(t) + ' &times;</span>'; }).join('');
+  list.querySelectorAll('.tag-edit').forEach(function(el){
+    el.addEventListener('click', function(){ setTags(currentNote.id, getTags(currentNote.id).filter(function(x){ return x !== el.dataset.t; })); renderEditTags(); });
+  });
+}
+function openNew(){
+  newNoteTags = [];
+  document.getElementById('nmName').value = '';
+  document.getElementById('nmText').value = '';
+  fillSectionSelect('nmSection');
+  buildThemePicker('nmThemePicker', 'Yellow');
+  renderNewTags();
+  document.getElementById('newModal').classList.add('open');
+  document.getElementById('nmText').focus();
+}
+function renderNewTags(){
+  const list = document.getElementById('nmTagList');
+  list.innerHTML = newNoteTags.map(function(t){ return '<span class="tag-edit" data-t="' + esc(t) + '">' + esc(t) + ' &times;</span>'; }).join('');
+  list.querySelectorAll('.tag-edit').forEach(function(el){
+    el.addEventListener('click', function(){ newNoteTags = newNoteTags.filter(function(x){ return x !== el.dataset.t; }); renderNewTags(); });
+  });
+}
+function toast(msg, err){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' error' : '');
+  setTimeout(function(){ t.classList.add('show'); }, 10);
+  setTimeout(function(){ t.classList.remove('show'); }, 2400);
+}
+
+document.getElementById('searchBox').addEventListener('input', render);
+document.querySelectorAll('.vtab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.vtab').forEach(function(x){ x.classList.remove('active'); });
+    tab.classList.add('active');
+    activeView = tab.dataset.view;
+    render();
+  });
+});
+document.querySelectorAll('.fbtn').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.fbtn').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active');
+    activeType = b.dataset.type;
+    render();
+  });
+});
+
+document.getElementById('mClose').addEventListener('click', function(){ document.getElementById('modal').classList.remove('open'); });
+document.getElementById('mCancel').addEventListener('click', function(){ document.getElementById('modal').classList.remove('open'); });
+document.getElementById('modal').addEventListener('click', function(e){ if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open'); });
+document.getElementById('mCopy').addEventListener('click', function(){ navigator.clipboard.writeText(document.getElementById('mText').value); toast('Copied!'); });
+document.getElementById('mSave').addEventListener('click', function(){
+  const text = document.getElementById('mText').value;
+  const theme = getSelectedTheme('mThemePicker');
+  const section = document.getElementById('mSection').value;
+  ALL = ALL.filter(function(n){ return n.id !== currentNote.id; });
+  currentNote.text = text;
+  currentNote.theme = theme;
+  currentNote.section = section;
+  currentNote.updatedAt = now();
+  ALL.unshift(currentNote);
+  saveNotes(ALL);
+  document.getElementById('modal').classList.remove('open');
+  updateViewCounts();
+  render();
+  toast('Saved!');
+});
+document.getElementById('mTagInput').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); addEditTag(); } });
+document.getElementById('mTagAdd').addEventListener('click', addEditTag);
+function addEditTag(){
+  const inp = document.getElementById('mTagInput');
+  const v = inp.value.trim();
+  if (!v) return;
+  const tags = getTags(currentNote.id);
+  if (tags.indexOf(v) < 0){ tags.push(v); setTags(currentNote.id, tags); }
+  inp.value = '';
+  renderEditTags();
+}
+document.getElementById('mDelete').addEventListener('click', function(){ document.getElementById('confirmDel').classList.add('open'); });
+document.getElementById('cdNo').addEventListener('click', function(){ document.getElementById('confirmDel').classList.remove('open'); });
+document.getElementById('cdYes').addEventListener('click', function(){
+  ALL = ALL.filter(function(n){ return n.id !== currentNote.id; });
+  saveNotes(ALL);
+  document.getElementById('confirmDel').classList.remove('open');
+  document.getElementById('modal').classList.remove('open');
+  updateViewCounts();
+  render();
+  toast('Deleted!');
+});
+
+document.getElementById('btnNew').addEventListener('click', openNew);
+document.getElementById('nmClose').addEventListener('click', function(){ document.getElementById('newModal').classList.remove('open'); });
+document.getElementById('nmCancel').addEventListener('click', function(){ document.getElementById('newModal').classList.remove('open'); });
+document.getElementById('newModal').addEventListener('click', function(e){ if (e.target.id === 'newModal') document.getElementById('newModal').classList.remove('open'); });
+document.getElementById('nmTagInput').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); addNewTag(); } });
+document.getElementById('nmTagAdd').addEventListener('click', addNewTag);
+function addNewTag(){
+  const inp = document.getElementById('nmTagInput');
+  const v = inp.value.trim();
+  if (v && newNoteTags.indexOf(v) < 0){ newNoteTags.push(v); renderNewTags(); }
+  inp.value = '';
+}
+document.getElementById('nmCreate').addEventListener('click', function(){
+  const text = document.getElementById('nmText').value.trim();
+  const theme = getSelectedTheme('nmThemePicker');
+  const section = document.getElementById('nmSection').value;
+  const name = document.getElementById('nmName').value.trim();
+  if (!text){ toast('Write something first!', true); return; }
+  const id = uid();
+  const note = {id: id, name: name, text: text, theme: theme, section: section, createdAt: now(), updatedAt: now()};
+  ALL.unshift(note);
+  saveNotes(ALL);
+  if (newNoteTags.length) setTags(id, newNoteTags);
+  else if (name) setTags(id, [name]);
+  document.getElementById('newModal').classList.remove('open');
+  updateViewCounts();
+  render();
+  toast('Note created!');
+});
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape'){
+    document.getElementById('confirmDel').classList.remove('open');
+    document.getElementById('modal').classList.remove('open');
+    document.getElementById('newModal').classList.remove('open');
+  }
+});
+
+load();
+</script>
+</body>
+</html>
